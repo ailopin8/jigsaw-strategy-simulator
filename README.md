@@ -36,14 +36,22 @@ Streamlit will print the local URL in the terminal, typically
 ## Read the agent simulation
 
 - The blue diamond is the specialist; its size follows expertise and its border
-  reflects rarity.
+  reflects rarity. Orbiting dots show renewal activity.
 - The orange square is the partner; the connecting line strengthens as
-  recognition, trust, and integration develop.
-- Red triangles are imitators; they become more prominent as copying pressure
-  and commoditisation increase.
-- Green circles are market agents; they activate as the combined offer gains
-  adoption.
-- Moving particles represent capability exchange and value reaching the market.
+  recognition, trust, and integration develop. Trust physically draws the two
+  agents together.
+- Red triangles are imitators; they grow and move toward the specialist as
+  copying pressure and commoditisation increase.
+- Green circles are market agents; they activate and move toward the joint offer
+  as adoption increases.
+- Blue arrows carry specialist capability to the partner, while orange arrows
+  return resources and recognition.
+- Green arrows carry joint value into the market, while gold arrows return
+  demand feedback. Red arrows show capability knowledge being copied.
+- The translucent red barrier represents effective coordination friction. It
+  shrinks as trust and integration reduce friction's effect.
+- Background zones distinguish the capability niche, partnership interface,
+  and market environment.
 
 Use **Play** and **Pause** inside the chart, drag its month slider to scrub the
 timeline, or change playback speed above it.

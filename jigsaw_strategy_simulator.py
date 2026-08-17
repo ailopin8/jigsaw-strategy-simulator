@@ -264,9 +264,11 @@ st.plotly_chart(
     config={"displayModeBar": False},
 )
 st.caption(
-    "Diamond = specialist · Square = partner · Triangles = imitators · "
-    "Circles = market agents. Stronger links represent deeper integration, "
-    "copying pressure or realised value flow."
+    "Agents move because of the model: trust draws the specialist and partner "
+    "together, copying draws imitators inward, and adoption draws market agents "
+    "toward the joint offer. Blue arrows carry capability, orange arrows return "
+    "resources and recognition, green arrows deliver value, gold arrows return "
+    "demand, and red arrows show copying. The red field is effective friction."
 )
 
 st.divider()

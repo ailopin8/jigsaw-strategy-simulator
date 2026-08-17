@@ -1,3 +1,5 @@
+from math import dist
+
 import pandas as pd
 
 from jigsaw_agent_visualization import make_agent_simulation_chart, snapshot_for
@@ -50,6 +52,11 @@ def test_agent_snapshot_visual_values_are_bounded() -> None:
     assert 0 <= snapshot.imitation_strength <= 1
     assert 0 <= snapshot.market_activity <= 1
     assert 0 <= snapshot.value_flow_strength <= 1
+    assert 0 <= snapshot.demand_feedback_strength <= 1
+    assert 0 <= snapshot.friction_strength <= 1
+    assert 0 <= snapshot.rarity_strength <= 1
+    assert 0 <= snapshot.specialist_position[0] <= 1
+    assert 0 <= snapshot.partner_position[0] <= 1
 
 
 def test_agent_animation_has_one_frame_per_month() -> None:
@@ -60,3 +67,54 @@ def test_agent_animation_has_one_frame_per_month() -> None:
     assert len(figure.frames) == 13
     assert [frame.name for frame in figure.frames] == [str(month) for month in range(13)]
     assert len(figure.data) == len(figure.frames[0].data)
+    assert len(figure.layout.shapes) == 3
+
+
+def test_agent_motion_reflects_strategic_forces() -> None:
+    protected_params = Params(
+        months=72,
+        initial_rarity=0.90,
+        imitation_pressure=0.0,
+        innovation_rate=0.08,
+    )
+    copied_params = Params(
+        months=72,
+        initial_rarity=0.45,
+        imitation_pressure=0.08,
+        innovation_rate=0.0,
+    )
+    protected = snapshot_for(simulate(protected_params).iloc[-1], protected_params)
+    copied = snapshot_for(simulate(copied_params).iloc[-1], copied_params)
+
+    protected_distance = sum(
+        dist(position, protected.specialist_position)
+        for position in protected.imitator_positions
+    )
+    copied_distance = sum(
+        dist(position, copied.specialist_position)
+        for position in copied.imitator_positions
+    )
+
+    assert copied.imitation_strength > protected.imitation_strength
+    assert copied_distance < protected_distance
+
+
+def test_integration_reduces_barrier_and_draws_partners_together() -> None:
+    params = Params(
+        months=72,
+        initial_trust=0.70,
+        partner_openness=0.95,
+        complementarity=0.95,
+        integration_effort=0.95,
+        delivery_reliability=0.98,
+        market_demand=0.95,
+    )
+    result = simulate(params)
+    first = snapshot_for(result.iloc[0], params)
+    final = snapshot_for(result.iloc[-1], params)
+
+    assert final.friction_strength < first.friction_strength
+    assert dist(final.specialist_position, final.partner_position) < dist(
+        first.specialist_position, first.partner_position
+    )
+    assert final.market_activity > first.market_activity
