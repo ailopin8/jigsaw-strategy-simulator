@@ -86,6 +86,11 @@ st.caption(
 
 with st.sidebar:
     st.header("Scenario controls")
+    st.caption(
+        "Controls are grouped by their primary effect. Changes then propagate "
+        "through the other pieces as the jigsaw evolves."
+    )
+    st.markdown("#### Scenario setup")
     preset = st.selectbox(
         "Starting scenario",
         [
@@ -145,107 +150,138 @@ with st.sidebar:
     }
     selected_preset = presets[preset]
     months = st.slider("Simulation length (months)", 24, 120, 72, 12)
-    focus = slider(
-        "Capability concentration",
-        10,
-        100,
-        selected_preset["focus"],
-        "How much effort is focused on one specialism.",
-    )
-    initial_expertise = slider(
-        "Initial expertise depth",
-        5,
-        95,
-        selected_preset["expertise"],
-        "Starting mastery of the narrow capability.",
-    )
-    learning_rate = (
-        slider(
-            "Learning rate",
-            1,
-            10,
-            5,
-            "Speed at which focused practice deepens expertise.",
+    st.divider()
+
+    with st.expander("🔷 Specialist piece (blue)", expanded=True):
+        st.caption(
+            "Primary target: the specialist's expertise, rarity halo, renewal "
+            "activity, and local strength."
         )
-        * 0.9
-    )
-    innovation_rate = slider(
-        "Renewal / innovation",
-        0,
-        8,
-        3,
-        "How quickly the specialist renews the capability to preserve rarity.",
-    )
-    initial_rarity = slider(
-        "Initial scarcity",
-        5,
-        100,
-        selected_preset["rarity"],
-        "How difficult the specialist capability is to find or copy.",
-    )
-    imitation_pressure = slider(
-        "Imitation pressure",
-        0,
-        8,
-        2,
-        "How quickly alternatives copy or substitute the specialism.",
-    )
-    complementarity = slider(
-        "Partner complementarity",
-        0,
-        100,
-        selected_preset["complementarity"],
-        "How strongly the specialist capability complements the partner.",
-    )
-    partner_reach = slider(
-        "Partner reach / platform",
-        10,
-        100,
-        selected_preset.get("reach", 82),
-        "Scale of customers, assets, distribution or legitimacy supplied by the partner.",
-    )
-    partner_openness = slider(
-        "Partner openness",
-        0,
-        100,
-        selected_preset["openness"],
-        "Willingness to recognise and use outside expertise.",
-    )
-    initial_trust = slider(
-        "Initial trust",
-        0,
-        80,
-        selected_preset.get("trust", 18),
-        "Trust present before collaboration begins.",
-    )
-    reliability = slider(
-        "Delivery reliability",
-        20,
-        100,
-        selected_preset.get("reliability", 78),
-        "Consistency with which the specialist delivers useful work.",
-    )
-    integration_effort = slider(
-        "Integration effort",
-        0,
-        100,
-        selected_preset.get("integration", 48),
-        "Effort devoted to aligning interfaces and processes.",
-    )
-    friction = slider(
-        "Coordination friction",
-        0,
-        100,
-        selected_preset["friction"],
-        "Cultural, technical and governance difficulty in working together.",
-    )
-    demand = slider(
-        "Market demand",
-        10,
-        100,
-        selected_preset.get("demand", 72),
-        "Demand for the combined value proposition.",
-    )
+        focus = slider(
+            "Capability concentration",
+            10,
+            100,
+            selected_preset["focus"],
+            "How much effort is focused on one specialism.",
+        )
+        initial_expertise = slider(
+            "Initial expertise depth",
+            5,
+            95,
+            selected_preset["expertise"],
+            "Starting mastery of the narrow capability.",
+        )
+        learning_rate = (
+            slider(
+                "Learning rate",
+                1,
+                10,
+                5,
+                "Speed at which focused practice deepens expertise.",
+            )
+            * 0.9
+        )
+        innovation_rate = slider(
+            "Renewal / innovation",
+            0,
+            8,
+            3,
+            "How quickly the specialist renews the capability to preserve rarity.",
+        )
+        initial_rarity = slider(
+            "Initial scarcity",
+            5,
+            100,
+            selected_preset["rarity"],
+            "How difficult the specialist capability is to find or copy.",
+        )
+
+    with st.expander("🟧 Partner platform (orange)", expanded=True):
+        st.caption(
+            "Primary target: the partner's platform scale and willingness to "
+            "recognise external capability."
+        )
+        partner_reach = slider(
+            "Partner reach / platform",
+            10,
+            100,
+            selected_preset.get("reach", 82),
+            "Scale of customers, assets, distribution or legitimacy supplied by the partner.",
+        )
+        partner_openness = slider(
+            "Partner openness",
+            0,
+            100,
+            selected_preset["openness"],
+            "Willingness to recognise and use outside expertise.",
+        )
+
+    with st.expander("🧩 Fit & interlock (blue ↔ orange)", expanded=True):
+        st.caption(
+            "Primary target: alignment and exchange between both pieces, "
+            "including the fit gap, flow strength, and friction barrier."
+        )
+        complementarity = slider(
+            "Partner complementarity",
+            0,
+            100,
+            selected_preset["complementarity"],
+            "How strongly the specialist capability complements the partner.",
+        )
+        initial_trust = slider(
+            "Initial trust",
+            0,
+            80,
+            selected_preset.get("trust", 18),
+            "Trust present before collaboration begins.",
+        )
+        reliability = slider(
+            "Delivery reliability",
+            20,
+            100,
+            selected_preset.get("reliability", 78),
+            "Consistency with which the specialist delivers useful work.",
+        )
+        integration_effort = slider(
+            "Integration effort",
+            0,
+            100,
+            selected_preset.get("integration", 48),
+            "Effort devoted to aligning interfaces and processes.",
+        )
+        friction = slider(
+            "Coordination friction",
+            0,
+            100,
+            selected_preset["friction"],
+            "Cultural, technical and governance difficulty in working together.",
+        )
+
+    with st.expander("🔴 Look-alike imitators", expanded=False):
+        st.caption(
+            "Primary target: the red pieces' copying speed, approach, growth, "
+            "and pressure on specialist scarcity."
+        )
+        imitation_pressure = slider(
+            "Imitation pressure",
+            0,
+            8,
+            2,
+            "How quickly alternatives copy or substitute the specialism.",
+        )
+
+    with st.expander("🟢 Market picture", expanded=False):
+        st.caption(
+            "Primary target: the green agents' demand field, adoption, and "
+            "response to the combined offer."
+        )
+        demand = slider(
+            "Market demand",
+            10,
+            100,
+            selected_preset.get("demand", 72),
+            "Demand for the combined value proposition.",
+        )
 
 params = Params(
     months=months,

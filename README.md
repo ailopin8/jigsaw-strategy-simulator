@@ -59,6 +59,22 @@ timeline, or change playback speed above it.
 Choose **Integrated jigsaw** to watch a high-fit relationship progress to a
 complete phase-6 interlock and reveal the wider market picture.
 
+## Control groups
+
+The sidebar groups controls by their primary target in the agent simulation:
+
+- **Specialist piece (blue):** capability concentration, initial expertise,
+  learning, renewal, and scarcity.
+- **Partner platform (orange):** partner reach and openness.
+- **Fit & interlock (blue ↔ orange):** complementarity, trust, reliability,
+  integration effort, and coordination friction.
+- **Look-alike imitators (red):** imitation pressure.
+- **Market picture (green):** market demand.
+
+These are primary effects, not isolated ones. For example, higher imitation
+pressure acts through the red pieces but eventually reduces the blue piece's
+rarity, while stronger interlock can increase green-agent adoption.
+
 ## Test
 
 ```bash
