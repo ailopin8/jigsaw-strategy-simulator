@@ -88,7 +88,13 @@ with st.sidebar:
     st.header("Scenario controls")
     preset = st.selectbox(
         "Starting scenario",
-        ["Promising specialist", "Hidden gem", "Easy to copy", "Poor fit"],
+        [
+            "Promising specialist",
+            "Integrated jigsaw",
+            "Hidden gem",
+            "Easy to copy",
+            "Poor fit",
+        ],
     )
     presets = {
         "Promising specialist": {
@@ -98,6 +104,19 @@ with st.sidebar:
             "complementarity": 80,
             "openness": 65,
             "friction": 25,
+        },
+        "Integrated jigsaw": {
+            "focus": 85,
+            "expertise": 55,
+            "rarity": 85,
+            "complementarity": 98,
+            "openness": 95,
+            "friction": 5,
+            "trust": 35,
+            "reliability": 98,
+            "integration": 95,
+            "reach": 90,
+            "demand": 90,
         },
         "Hidden gem": {
             "focus": 90,
@@ -182,7 +201,7 @@ with st.sidebar:
         "Partner reach / platform",
         10,
         100,
-        82,
+        selected_preset.get("reach", 82),
         "Scale of customers, assets, distribution or legitimacy supplied by the partner.",
     )
     partner_openness = slider(
@@ -196,21 +215,21 @@ with st.sidebar:
         "Initial trust",
         0,
         80,
-        18,
+        selected_preset.get("trust", 18),
         "Trust present before collaboration begins.",
     )
     reliability = slider(
         "Delivery reliability",
         20,
         100,
-        78,
+        selected_preset.get("reliability", 78),
         "Consistency with which the specialist delivers useful work.",
     )
     integration_effort = slider(
         "Integration effort",
         0,
         100,
-        48,
+        selected_preset.get("integration", 48),
         "Effort devoted to aligning interfaces and processes.",
     )
     friction = slider(
@@ -224,7 +243,7 @@ with st.sidebar:
         "Market demand",
         10,
         100,
-        72,
+        selected_preset.get("demand", 72),
         "Demand for the combined value proposition.",
     )
 
@@ -247,10 +266,11 @@ params = Params(
 )
 df = simulate(params)
 
-st.subheader("Animated agent ecosystem")
+st.subheader("Animated Jigsaw ecosystem")
 st.caption(
-    "Press Play to watch capability, recognition, imitation and market adoption "
-    "develop. Drag the chart timeline to inspect any month."
+    "Press Play to watch the scarce specialist piece approach and interlock with "
+    "the partner platform. Fit, copying and completion all come from the model. "
+    "Drag the chart timeline to inspect any month."
 )
 playback_speed = st.segmented_control(
     "Playback speed",
@@ -264,11 +284,11 @@ st.plotly_chart(
     config={"displayModeBar": False},
 )
 st.caption(
-    "Agents move because of the model: trust draws the specialist and partner "
-    "together, copying draws imitators inward, and adoption draws market agents "
-    "toward the joint offer. Blue arrows carry capability, orange arrows return "
-    "resources and recognition, green arrows deliver value, gold arrows return "
-    "demand, and red arrows show copying. The red field is effective friction."
+    "The blue tab and orange slot align through complementarity, then close through "
+    "trust and integration. Red look-alike pieces compete for the specialist's "
+    "place; market agents reveal more of the wider picture as adoption grows. Blue "
+    "arrows carry capability, orange arrows return resources, green arrows deliver "
+    "value, gold arrows return demand, and red arrows show copying."
 )
 
 st.divider()

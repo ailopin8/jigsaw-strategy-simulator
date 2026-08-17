@@ -11,7 +11,7 @@ import plotly.graph_objects as go
 from jigsaw_strategy_model import Params
 
 
-SPECIALIST_BASE = (0.14, 0.50)
+SPECIALIST_BASE = (0.18, 0.50)
 PARTNER_BASE = (0.51, 0.50)
 IMITATOR_BASES = ((0.07, 0.80), (0.18, 0.86), (0.29, 0.75))
 MARKET_BASES = (
@@ -48,6 +48,9 @@ class AgentSnapshot:
     demand_feedback_strength: float
     friction_strength: float
     rarity_strength: float
+    fit_alignment: float
+    assembly_progress: float
+    picture_completion: float
 
 
 def _bounded(value: float, lower: float = 0.0, upper: float = 1.0) -> float:
@@ -76,13 +79,43 @@ def snapshot_for(row: pd.Series, params: Params) -> AgentSnapshot:
     adoption = float(row["Market adoption"]) / 100
     realised_synergy = float(row["Realised synergy"]) / 100
 
+    effective_friction = _bounded(
+        params.coordination_friction
+        * (1.0 - 0.72 * integration)
+        * (1.0 - 0.22 * trust)
+    )
+    fit_alignment = _bounded(
+        params.complementarity * (1.0 - 0.78 * effective_friction)
+    )
+    assembly_progress = _bounded(
+        (0.26 * recognition + 0.32 * trust + 0.42 * integration)
+        * 1.45
+        * params.complementarity
+    )
+    picture_completion = _bounded(
+        0.34 * integration + 0.36 * realised_synergy + 0.30 * adoption
+    )
+
+    vertical_misalignment = 0.065 * (1.0 - fit_alignment)
     specialist_position = (
-        SPECIALIST_BASE[0] + 0.045 * recognition,
-        SPECIALIST_BASE[1] + 0.012 * math.sin(month * 0.48),
+        SPECIALIST_BASE[0] + 0.025 * recognition,
+        SPECIALIST_BASE[1]
+        + vertical_misalignment
+        + 0.003 * math.sin(month * 0.48),
+    )
+    separated_partner = (
+        PARTNER_BASE[0],
+        PARTNER_BASE[1]
+        - vertical_misalignment
+        - 0.003 * math.sin(month * 0.39),
+    )
+    interlocked_partner = (
+        specialist_position[0] + 0.153,
+        specialist_position[1],
     )
     partner_position = (
-        PARTNER_BASE[0] - 0.045 * trust * params.partner_openness,
-        PARTNER_BASE[1] - 0.010 * math.sin(month * 0.39),
+        _towards(separated_partner, interlocked_partner, assembly_progress)[0],
+        _towards(separated_partner, interlocked_partner, assembly_progress)[1],
     )
 
     imitation_strength = _bounded(
@@ -113,12 +146,6 @@ def snapshot_for(row: pd.Series, params: Params) -> AgentSnapshot:
             )
         )
 
-    effective_friction = _bounded(
-        params.coordination_friction
-        * (1.0 - 0.72 * integration)
-        * (1.0 - 0.22 * trust)
-    )
-
     return AgentSnapshot(
         month=month,
         phase=int(row["Phase"]),
@@ -139,6 +166,9 @@ def snapshot_for(row: pd.Series, params: Params) -> AgentSnapshot:
         demand_feedback_strength=_bounded(adoption * params.market_demand),
         friction_strength=effective_friction,
         rarity_strength=_bounded(rarity),
+        fit_alignment=fit_alignment,
+        assembly_progress=assembly_progress,
+        picture_completion=picture_completion,
     )
 
 
@@ -148,6 +178,77 @@ def _rgba(hex_colour: str, opacity: float) -> str:
         int(hex_colour[index : index + 2], 16) for index in (0, 2, 4)
     )
     return f"rgba({red},{green},{blue},{_bounded(opacity):.3f})"
+
+
+def _puzzle_piece_points(
+    centre: tuple[float, float],
+    half_width: float,
+    half_height: float,
+    joining_edge: str,
+    tab_depth: float,
+) -> tuple[list[float], list[float]]:
+    """Return an angular jigsaw-piece outline with a tab or matching slot."""
+    centre_x, centre_y = centre
+    left = centre_x - half_width
+    right = centre_x + half_width
+    top = centre_y + half_height
+    bottom = centre_y - half_height
+
+    points: list[tuple[float, float]] = [
+        (left, top),
+        (centre_x - 0.34 * half_width, top),
+        (centre_x - 0.24 * half_width, top + 0.45 * tab_depth),
+        (centre_x, top + 0.72 * tab_depth),
+        (centre_x + 0.24 * half_width, top + 0.45 * tab_depth),
+        (centre_x + 0.34 * half_width, top),
+        (right, top),
+    ]
+
+    if joining_edge == "tab-right":
+        points.extend(
+            [
+                (right, centre_y + 0.34 * half_height),
+                (right + 0.55 * tab_depth, centre_y + 0.25 * half_height),
+                (right + tab_depth, centre_y),
+                (right + 0.55 * tab_depth, centre_y - 0.25 * half_height),
+                (right, centre_y - 0.34 * half_height),
+            ]
+        )
+    else:
+        points.extend([(right, bottom)])
+
+    points.extend([(right, bottom), (left, bottom)])
+
+    if joining_edge == "slot-left":
+        points.extend(
+            [
+                (left, centre_y - 0.34 * half_height),
+                (left + 0.55 * tab_depth, centre_y - 0.25 * half_height),
+                (left + tab_depth, centre_y),
+                (left + 0.55 * tab_depth, centre_y + 0.25 * half_height),
+                (left, centre_y + 0.34 * half_height),
+            ]
+        )
+
+    points.append((left, top))
+    return [point[0] for point in points], [point[1] for point in points]
+
+
+def _joined_puzzle_pieces(
+    centres: tuple[tuple[float, float], ...],
+    half_width: float,
+    half_height: float,
+    tab_depth: float,
+) -> tuple[list[float | None], list[float | None]]:
+    x_values: list[float | None] = []
+    y_values: list[float | None] = []
+    for centre in centres:
+        piece_x, piece_y = _puzzle_piece_points(
+            centre, half_width, half_height, "tab-right", tab_depth
+        )
+        x_values.extend([*piece_x, None])
+        y_values.extend([*piece_y, None])
+    return x_values, y_values
 
 
 def _segments(
@@ -261,7 +362,31 @@ def _frame_traces(row: pd.Series, params: Params) -> list[go.Scatter]:
         tuple(specialist for _ in imitators), imitators, state.month
     )
     renewal_x, renewal_y = _renewal_points(specialist, state.month)
-    friction_x, friction_y, friction_midpoint = _friction_field(state)
+    friction_x, friction_y, _ = _friction_field(state)
+    specialist_piece_x, specialist_piece_y = _puzzle_piece_points(
+        specialist,
+        half_width=0.048 + 0.00035 * (state.specialist_size - 30),
+        half_height=0.064 + 0.00045 * (state.specialist_size - 30),
+        joining_edge="tab-right",
+        tab_depth=0.021,
+    )
+    partner_piece_x, partner_piece_y = _puzzle_piece_points(
+        partner,
+        half_width=0.067 + 0.00025 * (state.partner_size - 40),
+        half_height=0.076 + 0.00035 * (state.partner_size - 40),
+        joining_edge="slot-left",
+        tab_depth=0.021,
+    )
+    imitator_piece_x, imitator_piece_y = _joined_puzzle_pieces(
+        imitators,
+        half_width=0.014 + 0.008 * state.imitation_strength,
+        half_height=0.021 + 0.008 * state.imitation_strength,
+        tab_depth=0.006,
+    )
+    interlock_midpoint = (
+        (specialist[0] + partner[0]) / 2,
+        (specialist[1] + partner[1]) / 2,
+    )
 
     relationship_colour = _rgba("#7A5195", state.relationship_opacity)
     capability_colour = _rgba("#4C78A8", 0.25 + 0.75 * state.recognition_strength)
@@ -288,18 +413,46 @@ def _frame_traces(row: pd.Series, params: Params) -> list[go.Scatter]:
             showlegend=False,
         ),
         go.Scatter(
+            x=[interlock_midpoint[0]],
+            y=[interlock_midpoint[1]],
+            mode="markers",
+            marker={
+                "color": _rgba("#7A5195", 0.02 + 0.12 * state.assembly_progress),
+                "size": 70 + 95 * state.assembly_progress,
+                "symbol": "circle",
+                "line": {
+                    "color": _rgba("#7A5195", 0.08 + 0.35 * state.assembly_progress),
+                    "width": 1 + 2 * state.assembly_progress,
+                },
+            },
+            hovertemplate=(
+                f"<b>Jigsaw interlock</b><br>Assembly: "
+                f"{state.assembly_progress * 100:.1f}"
+                f"<br>Fit alignment: {state.fit_alignment * 100:.1f}"
+                "<extra></extra>"
+            ),
+            showlegend=False,
+        ),
+        go.Scatter(
             x=[0.84],
             y=[0.51],
             mode="markers",
             marker={
-                "color": _rgba("#54A24B", 0.025 + 0.06 * params.market_demand),
+                "color": _rgba(
+                    "#54A24B", 0.02 + 0.04 * params.market_demand + 0.10 * state.picture_completion
+                ),
                 "size": 150 + 70 * params.market_demand,
                 "symbol": "circle",
-                "line": {"color": _rgba("#54A24B", 0.20), "width": 1},
+                "line": {
+                    "color": _rgba("#54A24B", 0.16 + 0.44 * state.picture_completion),
+                    "width": 1 + 2 * state.picture_completion,
+                },
             },
             hovertemplate=(
                 f"<b>Market environment</b><br>Demand: "
-                f"{params.market_demand * 100:.1f}<extra></extra>"
+                f"{params.market_demand * 100:.1f}"
+                f"<br>Picture completion: {state.picture_completion * 100:.1f}"
+                "<extra></extra>"
             ),
             showlegend=False,
         ),
@@ -339,7 +492,7 @@ def _frame_traces(row: pd.Series, params: Params) -> list[go.Scatter]:
             marker={
                 "color": _rgba("#F58518", 0.45),
                 "size": state.partner_size + 20,
-                "symbol": "square-open",
+                "symbol": "circle-open",
                 "line": {"color": _rgba("#F58518", 0.48), "width": 2},
             },
             hovertemplate=(
@@ -448,22 +601,18 @@ def _frame_traces(row: pd.Series, params: Params) -> list[go.Scatter]:
             showlegend=False,
         ),
         go.Scatter(
-            x=[specialist[0]],
-            y=[specialist[1]],
-            mode="markers+text",
-            text=["Specialist"],
-            textposition="bottom center",
-            marker={
-                "color": "#4C78A8",
-                "size": state.specialist_size,
-                "symbol": "diamond",
-                "line": {"color": "#2D4E72", "width": 2},
-            },
+            x=specialist_piece_x,
+            y=specialist_piece_y,
+            mode="lines",
+            fill="toself",
+            fillcolor=_rgba("#4C78A8", 0.88),
+            line={"color": "#2D4E72", "width": 2.5},
             customdata=[
                 [float(row["Expertise depth"]), rarity, local_strength, shaping_power]
+                for _ in specialist_piece_x
             ],
             hovertemplate=(
-                "<b>Specialist</b><br>Expertise: %{customdata[0]:.1f}"
+                "<b>Specialist jigsaw piece</b><br>Expertise: %{customdata[0]:.1f}"
                 "<br>Rarity: %{customdata[1]:.1f}"
                 "<br>Local strength: %{customdata[2]:.1f}"
                 "<br>Shaping power: %{customdata[3]:.1f}<extra></extra>"
@@ -471,20 +620,18 @@ def _frame_traces(row: pd.Series, params: Params) -> list[go.Scatter]:
             showlegend=False,
         ),
         go.Scatter(
-            x=[partner[0]],
-            y=[partner[1]],
-            mode="markers+text",
-            text=["Partner"],
-            textposition="bottom center",
-            marker={
-                "color": "#F58518",
-                "size": state.partner_size,
-                "symbol": "square",
-                "line": {"color": "#A65A0A", "width": 2},
-            },
-            customdata=[[recognition, trust, integration, params.partner_reach * 100]],
+            x=partner_piece_x,
+            y=partner_piece_y,
+            mode="lines",
+            fill="toself",
+            fillcolor=_rgba("#F58518", 0.88),
+            line={"color": "#A65A0A", "width": 2.5},
+            customdata=[
+                [recognition, trust, integration, params.partner_reach * 100]
+                for _ in partner_piece_x
+            ],
             hovertemplate=(
-                "<b>Partner</b><br>Recognition: %{customdata[0]:.1f}"
+                "<b>Partner jigsaw piece</b><br>Recognition: %{customdata[0]:.1f}"
                 "<br>Trust: %{customdata[1]:.1f}"
                 "<br>Integration: %{customdata[2]:.1f}"
                 "<br>Reach: %{customdata[3]:.1f}<extra></extra>"
@@ -492,28 +639,17 @@ def _frame_traces(row: pd.Series, params: Params) -> list[go.Scatter]:
             showlegend=False,
         ),
         go.Scatter(
-            x=[point[0] for point in imitators],
-            y=[point[1] for point in imitators],
-            mode="markers+text",
-            text=["Imitators", "", ""],
-            textposition="top center",
-            marker={
-                "color": imitation_colour,
-                "size": [
-                    14 + state.imitation_strength * (10 + 4 * index)
-                    for index in range(len(imitators))
-                ],
-                "symbol": "triangle-down",
-                "line": {"color": "#A23B3A", "width": 1},
-            },
-            customdata=[
-                [commoditisation, 100 - rarity, params.imitation_pressure * 100]
-                for _ in imitators
-            ],
+            x=imitator_piece_x,
+            y=imitator_piece_y,
+            mode="lines",
+            fill="toself",
+            fillcolor=imitation_colour,
+            line={"color": "#A23B3A", "width": 1.2},
             hovertemplate=(
-                "<b>Imitator</b><br>Commoditisation risk: %{customdata[0]:.1f}"
-                "<br>Rarity lost: %{customdata[1]:.1f}"
-                "<br>Imitation pressure: %{customdata[2]:.1f}<extra></extra>"
+                f"<b>Look-alike jigsaw piece</b><br>Commoditisation risk: "
+                f"{commoditisation:.1f}<br>Rarity lost: {100 - rarity:.1f}"
+                f"<br>Imitation pressure: {params.imitation_pressure * 100:.1f}"
+                "<extra></extra>"
             ),
             showlegend=False,
         ),
@@ -542,17 +678,41 @@ def _frame_traces(row: pd.Series, params: Params) -> list[go.Scatter]:
             showlegend=False,
         ),
         go.Scatter(
-            x=[0.22, (specialist[0] + partner[0]) / 2, 0.83, friction_midpoint],
-            y=[0.70, 0.39, 0.16, 0.76],
+            x=[
+                0.22,
+                interlock_midpoint[0],
+                0.83,
+                0.43,
+                0.84,
+            ],
+            y=[
+                0.70,
+                min(specialist[1], partner[1]) - 0.18,
+                0.16,
+                0.76,
+                0.88,
+            ],
             mode="text",
             text=[
-                f"Copy pressure {state.imitation_strength * 100:.0f}",
-                f"Trust {trust:.0f} · Integration {integration:.0f}",
+                f"Look-alike pressure {state.imitation_strength * 100:.0f}",
+                f"Fit {state.fit_alignment * 100:.0f} · Interlock {state.assembly_progress * 100:.0f}"
+                f"<br>Trust {trust:.0f} · Integration {integration:.0f}",
                 f"Adoption {adoption:.0f} · Demand {params.market_demand * 100:.0f}",
-                f"Effective friction {state.friction_strength * 100:.0f}",
+                f"Misalignment {state.friction_strength * 100:.0f}",
+                f"Wider picture {state.picture_completion * 100:.0f}% complete",
             ],
             textposition="middle center",
             textfont={"color": "#5D6470", "size": 11},
+            hoverinfo="skip",
+            showlegend=False,
+        ),
+        go.Scatter(
+            x=[specialist[0], partner[0]],
+            y=[specialist[1], partner[1]],
+            mode="text",
+            text=["SPECIALIST", "PARTNER"],
+            textposition="middle center",
+            textfont={"color": "#FFFFFF", "size": 10},
             hoverinfo="skip",
             showlegend=False,
         ),
@@ -643,7 +803,7 @@ def make_agent_simulation_chart(
             {
                 "x": 0.17,
                 "y": 0.105,
-                "text": "CAPABILITY NICHE",
+                "text": "SCARCE PIECE",
                 "showarrow": False,
                 "font": {"size": 10, "color": "#6C7480"},
                 "yanchor": "bottom",
@@ -651,7 +811,7 @@ def make_agent_simulation_chart(
             {
                 "x": 0.495,
                 "y": 0.105,
-                "text": "PARTNERSHIP INTERFACE",
+                "text": "FIT & INTERLOCK",
                 "showarrow": False,
                 "font": {"size": 10, "color": "#6C7480"},
                 "yanchor": "bottom",
@@ -659,7 +819,7 @@ def make_agent_simulation_chart(
             {
                 "x": 0.83,
                 "y": 0.105,
-                "text": "MARKET ENVIRONMENT",
+                "text": "COMPLETED PICTURE",
                 "showarrow": False,
                 "font": {"size": 10, "color": "#6C7480"},
                 "yanchor": "bottom",

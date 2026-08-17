@@ -55,6 +55,9 @@ def test_agent_snapshot_visual_values_are_bounded() -> None:
     assert 0 <= snapshot.demand_feedback_strength <= 1
     assert 0 <= snapshot.friction_strength <= 1
     assert 0 <= snapshot.rarity_strength <= 1
+    assert 0 <= snapshot.fit_alignment <= 1
+    assert 0 <= snapshot.assembly_progress <= 1
+    assert 0 <= snapshot.picture_completion <= 1
     assert 0 <= snapshot.specialist_position[0] <= 1
     assert 0 <= snapshot.partner_position[0] <= 1
 
@@ -114,7 +117,32 @@ def test_integration_reduces_barrier_and_draws_partners_together() -> None:
     final = snapshot_for(result.iloc[-1], params)
 
     assert final.friction_strength < first.friction_strength
+    assert final.assembly_progress > first.assembly_progress
+    assert final.picture_completion > first.picture_completion
     assert dist(final.specialist_position, final.partner_position) < dist(
         first.specialist_position, first.partner_position
     )
     assert final.market_activity > first.market_activity
+
+
+def test_complementarity_controls_jigsaw_alignment() -> None:
+    shared = {
+        "months": 0,
+        "coordination_friction": 0.10,
+        "initial_trust": 0.70,
+        "partner_openness": 0.95,
+    }
+    good_params = Params(complementarity=0.95, **shared)
+    poor_params = Params(complementarity=0.20, **shared)
+    good = snapshot_for(simulate(good_params).iloc[0], good_params)
+    poor = snapshot_for(simulate(poor_params).iloc[0], poor_params)
+
+    good_misalignment = abs(
+        good.specialist_position[1] - good.partner_position[1]
+    )
+    poor_misalignment = abs(
+        poor.specialist_position[1] - poor.partner_position[1]
+    )
+
+    assert good.fit_alignment > poor.fit_alignment
+    assert good_misalignment < poor_misalignment

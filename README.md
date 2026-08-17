@@ -35,26 +35,29 @@ Streamlit will print the local URL in the terminal, typically
 
 ## Read the agent simulation
 
-- The blue diamond is the specialist; its size follows expertise and its border
-  reflects rarity. Orbiting dots show renewal activity.
-- The orange square is the partner; the connecting line strengthens as
-  recognition, trust, and integration develop. Trust physically draws the two
-  agents together.
-- Red triangles are imitators; they grow and move toward the specialist as
-  copying pressure and commoditisation increase.
+- The blue tabbed piece is the scarce specialist capability; its size follows
+  expertise and its halo reflects rarity. Orbiting dots show renewal activity.
+- The orange platform piece has the complementary slot. Complementarity aligns
+  the two pieces; recognition, trust, and integration bring them together until
+  they interlock.
+- Red look-alike pieces grow and move toward the specialist as copying pressure
+  and commoditisation increase, competing for the same place in the system.
 - Green circles are market agents; they activate and move toward the joint offer
-  as adoption increases.
+  as adoption increases, gradually revealing a more complete value picture.
 - Blue arrows carry specialist capability to the partner, while orange arrows
   return resources and recognition.
 - Green arrows carry joint value into the market, while gold arrows return
   demand feedback. Red arrows show capability knowledge being copied.
 - The translucent red barrier represents effective coordination friction. It
   shrinks as trust and integration reduce friction's effect.
-- Background zones distinguish the capability niche, partnership interface,
-  and market environment.
+- Background zones distinguish the scarce piece, the fit-and-interlock process,
+  and the completed market picture.
 
 Use **Play** and **Pause** inside the chart, drag its month slider to scrub the
 timeline, or change playback speed above it.
+
+Choose **Integrated jigsaw** to watch a high-fit relationship progress to a
+complete phase-6 interlock and reveal the wider market picture.
 
 ## Test
 
