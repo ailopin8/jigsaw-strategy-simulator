@@ -4,6 +4,10 @@ An interactive learning model of the Jigsaw strategy from *Patterns of Strategy*
 It explores how a smaller specialist can concentrate scarce expertise, become
 locally stronger than a larger partner, and turn complementarity into joint value.
 
+The app includes a playable ecosystem simulation. A specialist, partner,
+imitators, and market agents visibly evolve as expertise, trust, integration,
+imitation, and adoption change month by month.
+
 The model is explanatory, not predictive. All outputs are dimensionless scores
 on a 0–100 scale.
 
@@ -29,6 +33,21 @@ Streamlit will print the local URL in the terminal, typically
 - Increase coordination friction to separate potential from realised synergy.
 - Increase renewal to preserve differentiation after success.
 
+## Read the agent simulation
+
+- The blue diamond is the specialist; its size follows expertise and its border
+  reflects rarity.
+- The orange square is the partner; the connecting line strengthens as
+  recognition, trust, and integration develop.
+- Red triangles are imitators; they become more prominent as copying pressure
+  and commoditisation increase.
+- Green circles are market agents; they activate as the combined offer gains
+  adoption.
+- Moving particles represent capability exchange and value reaching the market.
+
+Use **Play** and **Pause** inside the chart, drag its month slider to scrub the
+timeline, or change playback speed above it.
+
 ## Test
 
 ```bash
@@ -40,5 +59,5 @@ pytest
 
 - `jigsaw_strategy_simulator.py` — Streamlit interface and Plotly charts.
 - `jigsaw_strategy_model.py` — deterministic simulation model.
+- `jigsaw_agent_visualization.py` — animated ecosystem view.
 - `tests/test_simulation.py` — smoke tests for model invariants.
-

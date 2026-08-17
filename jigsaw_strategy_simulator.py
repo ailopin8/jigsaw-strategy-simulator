@@ -6,6 +6,7 @@ import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
 
+from jigsaw_agent_visualization import make_agent_simulation_chart
 from jigsaw_strategy_model import PHASES, Params, insight_for, phase_bands, simulate
 
 
@@ -246,6 +247,30 @@ params = Params(
 )
 df = simulate(params)
 
+st.subheader("Animated agent ecosystem")
+st.caption(
+    "Press Play to watch capability, recognition, imitation and market adoption "
+    "develop. Drag the chart timeline to inspect any month."
+)
+playback_speed = st.segmented_control(
+    "Playback speed",
+    options=["Slow", "Normal", "Fast"],
+    default="Normal",
+)
+frame_duration = {"Slow": 320, "Normal": 180, "Fast": 90}[playback_speed or "Normal"]
+st.plotly_chart(
+    make_agent_simulation_chart(df, params, frame_duration=frame_duration),
+    use_container_width=True,
+    config={"displayModeBar": False},
+)
+st.caption(
+    "Diamond = specialist · Square = partner · Triangles = imitators · "
+    "Circles = market agents. Stronger links represent deeper integration, "
+    "copying pressure or realised value flow."
+)
+
+st.divider()
+st.subheader("Inspect the strategy")
 selected_month = st.slider("Inspect month", 0, months, months)
 current = df.iloc[selected_month]
 
@@ -309,4 +334,3 @@ with st.expander("Model logic and limitations"):
         "and imitation erodes differentiation unless innovation renews it. All scores "
         "are dimensionless 0–100 indices."
     )
-

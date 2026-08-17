@@ -135,6 +135,7 @@ def simulate(p: Params) -> pd.DataFrame:
                 "Shaping power": shaping_power * 100,
                 "Value created": value_created * 100,
                 "Value captured": value_captured * 100,
+                "Market adoption": adoption * 100,
                 "Commoditisation risk": commoditisation * 100,
             }
         )
@@ -228,4 +229,3 @@ def insight_for(row: pd.Series) -> str:
         6: "Delivery interfaces are synchronised; the specialist capability now functions as part of a larger system.",
     }
     return messages[phase]
-

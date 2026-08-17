@@ -1,5 +1,6 @@
 import pandas as pd
 
+from jigsaw_agent_visualization import make_agent_simulation_chart, snapshot_for
 from jigsaw_strategy_model import Params, phase_bands, simulate
 
 
@@ -36,3 +37,26 @@ def test_phase_bands_cover_the_full_timeline() -> None:
     assert bands[-1][1] == 12
     assert sum(end - start + 1 for start, end, _ in bands) == 13
 
+
+def test_agent_snapshot_visual_values_are_bounded() -> None:
+    params = Params(months=12)
+    final_row = simulate(params).iloc[-1]
+    snapshot = snapshot_for(final_row, params)
+
+    assert 30 <= snapshot.specialist_size <= 56
+    assert 40 <= snapshot.partner_size <= 62
+    assert 1 <= snapshot.relationship_width <= 8
+    assert 0 <= snapshot.relationship_opacity <= 1
+    assert 0 <= snapshot.imitation_strength <= 1
+    assert 0 <= snapshot.market_activity <= 1
+    assert 0 <= snapshot.value_flow_strength <= 1
+
+
+def test_agent_animation_has_one_frame_per_month() -> None:
+    params = Params(months=12)
+    result = simulate(params)
+    figure = make_agent_simulation_chart(result, params)
+
+    assert len(figure.frames) == 13
+    assert [frame.name for frame in figure.frames] == [str(month) for month in range(13)]
+    assert len(figure.data) == len(figure.frames[0].data)
