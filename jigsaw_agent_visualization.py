@@ -51,6 +51,13 @@ class AgentSnapshot:
     fit_alignment: float
     assembly_progress: float
     picture_completion: float
+    market_pull: float
+    specialist_environment_support: float
+    partner_environment_support: float
+    specialist_influence: float
+    partner_influence: float
+    imitator_influence: float
+    joint_environment_control: float
 
 
 def _bounded(value: float, lower: float = 0.0, upper: float = 1.0) -> float:
@@ -69,24 +76,26 @@ def _towards(
 def snapshot_for(row: pd.Series, params: Params) -> AgentSnapshot:
     """Translate model scores into bounded visual properties and agent motion."""
     month = int(row["Month"])
-    expertise = float(row["Expertise depth"]) / 100
     recognition = float(row["Partner recognition"]) / 100
     trust = float(row["Trust"]) / 100
     integration = float(row["Integration"]) / 100
     rarity = float(row["Rarity"]) / 100
-    rarity_loss = 1.0 - rarity
-    commoditisation = float(row["Commoditisation risk"]) / 100
     adoption = float(row["Market adoption"]) / 100
     realised_synergy = float(row["Realised synergy"]) / 100
+    market_pull = float(row["Market pull"]) / 100
+    specialist_environment_support = (
+        float(row["Specialist environmental support"]) / 100
+    )
+    partner_environment_support = float(row["Partner environmental support"]) / 100
+    specialist_influence = float(row["Specialist influence"]) / 100
+    partner_influence = float(row["Partner influence"]) / 100
+    imitator_influence = float(row["Imitator influence"]) / 100
+    joint_environment_control = float(row["Joint environmental control"]) / 100
 
     effective_friction = _bounded(
-        params.coordination_friction
-        * (1.0 - 0.72 * integration)
-        * (1.0 - 0.22 * trust)
+        params.coordination_friction * (1.0 - 0.72 * integration) * (1.0 - 0.22 * trust)
     )
-    fit_alignment = _bounded(
-        params.complementarity * (1.0 - 0.78 * effective_friction)
-    )
+    fit_alignment = _bounded(params.complementarity * (1.0 - 0.78 * effective_friction))
     assembly_progress = _bounded(
         (0.26 * recognition + 0.32 * trust + 0.42 * integration)
         * 1.45
@@ -99,15 +108,11 @@ def snapshot_for(row: pd.Series, params: Params) -> AgentSnapshot:
     vertical_misalignment = 0.065 * (1.0 - fit_alignment)
     specialist_position = (
         SPECIALIST_BASE[0] + 0.025 * recognition,
-        SPECIALIST_BASE[1]
-        + vertical_misalignment
-        + 0.003 * math.sin(month * 0.48),
+        SPECIALIST_BASE[1] + vertical_misalignment + 0.003 * math.sin(month * 0.48),
     )
     separated_partner = (
         PARTNER_BASE[0],
-        PARTNER_BASE[1]
-        - vertical_misalignment
-        - 0.003 * math.sin(month * 0.39),
+        PARTNER_BASE[1] - vertical_misalignment - 0.003 * math.sin(month * 0.39),
     )
     interlocked_partner = (
         specialist_position[0] + 0.153,
@@ -118,11 +123,7 @@ def snapshot_for(row: pd.Series, params: Params) -> AgentSnapshot:
         _towards(separated_partner, interlocked_partner, assembly_progress)[1],
     )
 
-    imitation_strength = _bounded(
-        0.15 * params.imitation_pressure * 12.5
-        + 0.45 * rarity_loss
-        + 0.40 * commoditisation
-    )
+    imitation_strength = _bounded(imitator_influence)
     imitator_positions = tuple(
         (
             _towards(base, specialist_position, 0.34 * imitation_strength)[0]
@@ -154,8 +155,8 @@ def snapshot_for(row: pd.Series, params: Params) -> AgentSnapshot:
         partner_position=partner_position,
         imitator_positions=imitator_positions,
         market_positions=tuple(market_positions),
-        specialist_size=30 + 26 * expertise,
-        partner_size=40 + 22 * params.partner_reach,
+        specialist_size=28 + 36 * specialist_influence,
+        partner_size=34 + 34 * partner_influence,
         relationship_width=1 + 7 * (0.45 * trust + 0.55 * integration),
         relationship_opacity=_bounded(0.16 + 0.40 * recognition + 0.44 * trust),
         recognition_strength=_bounded(recognition),
@@ -169,14 +170,19 @@ def snapshot_for(row: pd.Series, params: Params) -> AgentSnapshot:
         fit_alignment=fit_alignment,
         assembly_progress=assembly_progress,
         picture_completion=picture_completion,
+        market_pull=market_pull,
+        specialist_environment_support=specialist_environment_support,
+        partner_environment_support=partner_environment_support,
+        specialist_influence=specialist_influence,
+        partner_influence=partner_influence,
+        imitator_influence=imitator_influence,
+        joint_environment_control=joint_environment_control,
     )
 
 
 def _rgba(hex_colour: str, opacity: float) -> str:
     hex_colour = hex_colour.lstrip("#")
-    red, green, blue = (
-        int(hex_colour[index : index + 2], 16) for index in (0, 2, 4)
-    )
+    red, green, blue = (int(hex_colour[index : index + 2], 16) for index in (0, 2, 4))
     return f"rgba({red},{green},{blue},{_bounded(opacity):.3f})"
 
 
@@ -321,7 +327,12 @@ def _friction_field(
     half_height = 0.10 + 0.20 * state.friction_strength
     return (
         [midpoint - half_width, midpoint + half_width] * 2,
-        [0.50 - half_height, 0.50 - half_height, 0.50 + half_height, 0.50 + half_height],
+        [
+            0.50 - half_height,
+            0.50 - half_height,
+            0.50 + half_height,
+            0.50 + half_height,
+        ],
         midpoint,
     )
 
@@ -346,9 +357,7 @@ def _frame_traces(row: pd.Series, params: Params) -> list[go.Scatter]:
 
     market_x, market_y = _segments(partner, markets)
     imitation_x, imitation_y = _segments(specialist, imitators)
-    capability_x, capability_y = _flow_points(
-        specialist, partner, state.month, count=4
-    )
+    capability_x, capability_y = _flow_points(specialist, partner, state.month, count=4)
     resource_x, resource_y = _flow_points(
         partner, specialist, state.month, count=3, phase_offset=0.35
     )
@@ -365,15 +374,15 @@ def _frame_traces(row: pd.Series, params: Params) -> list[go.Scatter]:
     friction_x, friction_y, _ = _friction_field(state)
     specialist_piece_x, specialist_piece_y = _puzzle_piece_points(
         specialist,
-        half_width=0.048 + 0.00035 * (state.specialist_size - 30),
-        half_height=0.064 + 0.00045 * (state.specialist_size - 30),
+        half_width=0.045 + 0.00065 * (state.specialist_size - 28),
+        half_height=0.056 + 0.00085 * (state.specialist_size - 28),
         joining_edge="tab-right",
         tab_depth=0.021,
     )
     partner_piece_x, partner_piece_y = _puzzle_piece_points(
         partner,
-        half_width=0.067 + 0.00025 * (state.partner_size - 40),
-        half_height=0.076 + 0.00035 * (state.partner_size - 40),
+        half_width=0.058 + 0.00055 * (state.partner_size - 34),
+        half_height=0.065 + 0.00055 * (state.partner_size - 34),
         joining_edge="slot-left",
         tab_depth=0.021,
     )
@@ -386,6 +395,24 @@ def _frame_traces(row: pd.Series, params: Params) -> list[go.Scatter]:
     interlock_midpoint = (
         (specialist[0] + partner[0]) / 2,
         (specialist[1] + partner[1]) / 2,
+    )
+    imitator_centroid = (
+        sum(point[0] for point in imitators) / len(imitators),
+        sum(point[1] for point in imitators) / len(imitators),
+    )
+    specialist_direction = (
+        "↑"
+        if state.specialist_environment_support > 0.53
+        else "↓"
+        if state.specialist_environment_support < 0.47
+        else "→"
+    )
+    partner_direction = (
+        "↑"
+        if state.partner_environment_support > 0.53
+        else "↓"
+        if state.partner_environment_support < 0.47
+        else "→"
     )
 
     relationship_colour = _rgba("#7A5195", state.relationship_opacity)
@@ -405,7 +432,10 @@ def _frame_traces(row: pd.Series, params: Params) -> list[go.Scatter]:
             mode="lines",
             fill="toself",
             fillcolor=_rgba("#E45756", 0.04 + 0.22 * state.friction_strength),
-            line={"color": _rgba("#E45756", 0.18 + 0.62 * state.friction_strength), "width": 1},
+            line={
+                "color": _rgba("#E45756", 0.18 + 0.62 * state.friction_strength),
+                "width": 1,
+            },
             hovertemplate=(
                 f"<b>Coordination barrier</b><br>Effective friction: "
                 f"{state.friction_strength * 100:.1f}<extra></extra>"
@@ -417,17 +447,22 @@ def _frame_traces(row: pd.Series, params: Params) -> list[go.Scatter]:
             y=[interlock_midpoint[1]],
             mode="markers",
             marker={
-                "color": _rgba("#7A5195", 0.02 + 0.12 * state.assembly_progress),
-                "size": 70 + 95 * state.assembly_progress,
+                "color": _rgba(
+                    "#7A5195", 0.02 + 0.13 * state.joint_environment_control
+                ),
+                "size": 65 + 120 * state.joint_environment_control,
                 "symbol": "circle",
                 "line": {
-                    "color": _rgba("#7A5195", 0.08 + 0.35 * state.assembly_progress),
-                    "width": 1 + 2 * state.assembly_progress,
+                    "color": _rgba(
+                        "#7A5195", 0.10 + 0.48 * state.joint_environment_control
+                    ),
+                    "width": 1 + 3 * state.joint_environment_control,
                 },
             },
             hovertemplate=(
-                f"<b>Jigsaw interlock</b><br>Assembly: "
-                f"{state.assembly_progress * 100:.1f}"
+                f"<b>Joint influence field</b><br>Environmental control: "
+                f"{state.joint_environment_control * 100:.1f}"
+                f"<br>Assembly: {state.assembly_progress * 100:.1f}"
                 f"<br>Fit alignment: {state.fit_alignment * 100:.1f}"
                 "<extra></extra>"
             ),
@@ -439,9 +474,10 @@ def _frame_traces(row: pd.Series, params: Params) -> list[go.Scatter]:
             mode="markers",
             marker={
                 "color": _rgba(
-                    "#54A24B", 0.02 + 0.04 * params.market_demand + 0.10 * state.picture_completion
+                    "#54A24B",
+                    0.02 + 0.05 * state.market_pull + 0.10 * state.picture_completion,
                 ),
-                "size": 150 + 70 * params.market_demand,
+                "size": 135 + 95 * state.market_pull,
                 "symbol": "circle",
                 "line": {
                     "color": _rgba("#54A24B", 0.16 + 0.44 * state.picture_completion),
@@ -449,9 +485,31 @@ def _frame_traces(row: pd.Series, params: Params) -> list[go.Scatter]:
                 },
             },
             hovertemplate=(
-                f"<b>Market environment</b><br>Demand: "
-                f"{params.market_demand * 100:.1f}"
+                f"<b>Market environment</b><br>Market pull: "
+                f"{state.market_pull * 100:.1f}"
+                f"<br>Demand: {params.market_demand * 100:.1f}"
                 f"<br>Picture completion: {state.picture_completion * 100:.1f}"
+                "<extra></extra>"
+            ),
+            showlegend=False,
+        ),
+        go.Scatter(
+            x=[imitator_centroid[0]],
+            y=[imitator_centroid[1]],
+            mode="markers",
+            marker={
+                "color": _rgba("#E45756", 0.02 + 0.10 * state.imitator_influence),
+                "size": 50 + 115 * state.imitator_influence,
+                "symbol": "circle-open",
+                "line": {
+                    "color": _rgba("#E45756", 0.12 + 0.62 * state.imitator_influence),
+                    "width": 1 + 3 * state.imitator_influence,
+                },
+            },
+            hovertemplate=(
+                f"<b>Imitator influence field</b><br>Environmental influence: "
+                f"{state.imitator_influence * 100:.1f}"
+                f"<br>Commoditisation: {commoditisation:.1f}"
                 "<extra></extra>"
             ),
             showlegend=False,
@@ -461,13 +519,20 @@ def _frame_traces(row: pd.Series, params: Params) -> list[go.Scatter]:
             y=[specialist[1]],
             mode="markers",
             marker={
-                "color": _rgba("#4C78A8", 0.65),
-                "size": state.specialist_size + 24 + 18 * state.rarity_strength,
+                "color": _rgba("#4C78A8", 0.08 + 0.12 * state.specialist_influence),
+                "size": 70 + 125 * state.specialist_influence,
                 "symbol": "circle-open",
-                "line": {"color": _rgba("#4C78A8", 0.35 + 0.60 * state.rarity_strength), "width": 2 + 3 * state.rarity_strength},
+                "line": {
+                    "color": _rgba("#4C78A8", 0.22 + 0.68 * state.specialist_influence),
+                    "width": 1 + 4 * state.specialist_influence,
+                },
             },
             hovertemplate=(
-                f"<b>Scarcity field</b><br>Rarity: {rarity:.1f}<extra></extra>"
+                f"<b>Specialist influence field</b><br>Environmental influence: "
+                f"{state.specialist_influence * 100:.1f}"
+                f"<br>Environmental support: "
+                f"{state.specialist_environment_support * 100:.1f}"
+                f"<br>Rarity: {rarity:.1f}<extra></extra>"
             ),
             showlegend=False,
         ),
@@ -490,14 +555,20 @@ def _frame_traces(row: pd.Series, params: Params) -> list[go.Scatter]:
             y=[partner[1]],
             mode="markers",
             marker={
-                "color": _rgba("#F58518", 0.45),
-                "size": state.partner_size + 20,
+                "color": _rgba("#F58518", 0.08 + 0.12 * state.partner_influence),
+                "size": 80 + 125 * state.partner_influence,
                 "symbol": "circle-open",
-                "line": {"color": _rgba("#F58518", 0.48), "width": 2},
+                "line": {
+                    "color": _rgba("#F58518", 0.22 + 0.68 * state.partner_influence),
+                    "width": 1 + 4 * state.partner_influence,
+                },
             },
             hovertemplate=(
-                f"<b>Partner platform</b><br>Reach: "
-                f"{params.partner_reach * 100:.1f}<extra></extra>"
+                f"<b>Partner influence field</b><br>Environmental influence: "
+                f"{state.partner_influence * 100:.1f}"
+                f"<br>Environmental support: "
+                f"{state.partner_environment_support * 100:.1f}"
+                f"<br>Reach: {params.partner_reach * 100:.1f}<extra></extra>"
             ),
             showlegend=False,
         ),
@@ -608,14 +679,23 @@ def _frame_traces(row: pd.Series, params: Params) -> list[go.Scatter]:
             fillcolor=_rgba("#4C78A8", 0.88),
             line={"color": "#2D4E72", "width": 2.5},
             customdata=[
-                [float(row["Expertise depth"]), rarity, local_strength, shaping_power]
+                [
+                    float(row["Expertise depth"]),
+                    rarity,
+                    local_strength,
+                    shaping_power,
+                    state.specialist_influence * 100,
+                    state.specialist_environment_support * 100,
+                ]
                 for _ in specialist_piece_x
             ],
             hovertemplate=(
                 "<b>Specialist jigsaw piece</b><br>Expertise: %{customdata[0]:.1f}"
                 "<br>Rarity: %{customdata[1]:.1f}"
                 "<br>Local strength: %{customdata[2]:.1f}"
-                "<br>Shaping power: %{customdata[3]:.1f}<extra></extra>"
+                "<br>Shaping power: %{customdata[3]:.1f}"
+                "<br>Environmental influence: %{customdata[4]:.1f}"
+                "<br>Environmental support: %{customdata[5]:.1f}<extra></extra>"
             ),
             showlegend=False,
         ),
@@ -627,14 +707,23 @@ def _frame_traces(row: pd.Series, params: Params) -> list[go.Scatter]:
             fillcolor=_rgba("#F58518", 0.88),
             line={"color": "#A65A0A", "width": 2.5},
             customdata=[
-                [recognition, trust, integration, params.partner_reach * 100]
+                [
+                    recognition,
+                    trust,
+                    integration,
+                    params.partner_reach * 100,
+                    state.partner_influence * 100,
+                    state.partner_environment_support * 100,
+                ]
                 for _ in partner_piece_x
             ],
             hovertemplate=(
                 "<b>Partner jigsaw piece</b><br>Recognition: %{customdata[0]:.1f}"
                 "<br>Trust: %{customdata[1]:.1f}"
                 "<br>Integration: %{customdata[2]:.1f}"
-                "<br>Reach: %{customdata[3]:.1f}<extra></extra>"
+                "<br>Reach: %{customdata[3]:.1f}"
+                "<br>Environmental influence: %{customdata[4]:.1f}"
+                "<br>Environmental support: %{customdata[5]:.1f}<extra></extra>"
             ),
             showlegend=False,
         ),
@@ -646,8 +735,10 @@ def _frame_traces(row: pd.Series, params: Params) -> list[go.Scatter]:
             fillcolor=imitation_colour,
             line={"color": "#A23B3A", "width": 1.2},
             hovertemplate=(
-                f"<b>Look-alike jigsaw piece</b><br>Commoditisation risk: "
-                f"{commoditisation:.1f}<br>Rarity lost: {100 - rarity:.1f}"
+                f"<b>Look-alike jigsaw piece</b><br>Environmental influence: "
+                f"{state.imitator_influence * 100:.1f}"
+                f"<br>Commoditisation risk: {commoditisation:.1f}"
+                f"<br>Rarity lost: {100 - rarity:.1f}"
                 f"<br>Imitation pressure: {params.imitation_pressure * 100:.1f}"
                 "<extra></extra>"
             ),
@@ -660,9 +751,7 @@ def _frame_traces(row: pd.Series, params: Params) -> list[go.Scatter]:
             text=["Market agents", "", "", "", "", "", ""],
             textposition="top center",
             marker={
-                "color": [
-                    _rgba("#54A24B", opacity) for opacity in market_opacities
-                ],
+                "color": [_rgba("#54A24B", opacity) for opacity in market_opacities],
                 "size": [17 + 8 * opacity for opacity in market_opacities],
                 "line": {"color": "#327333", "width": 1},
             },
@@ -694,11 +783,12 @@ def _frame_traces(row: pd.Series, params: Params) -> list[go.Scatter]:
             ],
             mode="text",
             text=[
-                f"Look-alike pressure {state.imitation_strength * 100:.0f}",
-                f"Fit {state.fit_alignment * 100:.0f} · Interlock {state.assembly_progress * 100:.0f}"
-                f"<br>Trust {trust:.0f} · Integration {integration:.0f}",
-                f"Adoption {adoption:.0f} · Demand {params.market_demand * 100:.0f}",
-                f"Misalignment {state.friction_strength * 100:.0f}",
+                f"Imitator influence {state.imitator_influence * 100:.0f}",
+                f"Joint control {state.joint_environment_control * 100:.0f}"
+                f" · Interlock {state.assembly_progress * 100:.0f}"
+                f"<br>Fit {state.fit_alignment * 100:.0f}",
+                f"Market pull {state.market_pull * 100:.0f} · Adoption {adoption:.0f}",
+                f"Environmental resistance {state.friction_strength * 100:.0f}",
                 f"Wider picture {state.picture_completion * 100:.0f}% complete",
             ],
             textposition="middle center",
@@ -710,9 +800,14 @@ def _frame_traces(row: pd.Series, params: Params) -> list[go.Scatter]:
             x=[specialist[0], partner[0]],
             y=[specialist[1], partner[1]],
             mode="text",
-            text=["SPECIALIST", "PARTNER"],
+            text=[
+                f"SPECIALIST<br>Influence {state.specialist_influence * 100:.0f} "
+                f"{specialist_direction}",
+                f"PARTNER<br>Influence {state.partner_influence * 100:.0f} "
+                f"{partner_direction}",
+            ],
             textposition="middle center",
-            textfont={"color": "#FFFFFF", "size": 10},
+            textfont={"color": "#FFFFFF", "size": 9},
             hoverinfo="skip",
             showlegend=False,
         ),

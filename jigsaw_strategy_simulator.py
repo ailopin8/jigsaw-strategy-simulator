@@ -17,6 +17,7 @@ def make_trajectory_chart(df: pd.DataFrame) -> go.Figure:
         ("Partner recognition", "#F58518"),
         ("Realised synergy", "#54A24B"),
         ("Shaping power", "#B279A2"),
+        ("Joint environmental control", "#7A5195"),
         ("Commoditisation risk", "#E45756"),
     ]
     for name, colour in series:
@@ -27,7 +28,14 @@ def make_trajectory_chart(df: pd.DataFrame) -> go.Figure:
                 mode="lines",
                 name=name,
                 line={
-                    "width": 3 if name in {"Realised synergy", "Shaping power"} else 2,
+                    "width": 3
+                    if name
+                    in {
+                        "Realised synergy",
+                        "Shaping power",
+                        "Joint environmental control",
+                    }
+                    else 2,
                     "color": colour,
                 },
                 hovertemplate=f"Month %{{x}}<br>{name}: %{{y:.1f}}<extra></extra>",
@@ -122,6 +130,8 @@ with st.sidebar:
             "integration": 95,
             "reach": 90,
             "demand": 90,
+            "innovation": 7,
+            "imitation": 1,
         },
         "Hidden gem": {
             "focus": 90,
@@ -134,10 +144,16 @@ with st.sidebar:
         "Easy to copy": {
             "focus": 72,
             "expertise": 38,
-            "rarity": 48,
+            "rarity": 65,
             "complementarity": 78,
             "openness": 70,
             "friction": 20,
+            "trust": 30,
+            "reliability": 85,
+            "integration": 60,
+            "demand": 70,
+            "innovation": 0,
+            "imitation": 8,
         },
         "Poor fit": {
             "focus": 70,
@@ -185,7 +201,7 @@ with st.sidebar:
             "Renewal / innovation",
             0,
             8,
-            3,
+            selected_preset.get("innovation", 3),
             "How quickly the specialist renews the capability to preserve rarity.",
         )
         initial_rarity = slider(
@@ -266,7 +282,7 @@ with st.sidebar:
             "Imitation pressure",
             0,
             8,
-            2,
+            selected_preset.get("imitation", 2),
             "How quickly alternatives copy or substitute the specialism.",
         )
 
@@ -306,7 +322,8 @@ st.subheader("Animated Jigsaw ecosystem")
 st.caption(
     "Press Play to watch the scarce specialist piece approach and interlock with "
     "the partner platform. Fit, copying and completion all come from the model. "
-    "Drag the chart timeline to inspect any month."
+    "The pieces and their influence rings expand or contract as the environment "
+    "supports or resists them. Drag the chart timeline to inspect any month."
 )
 playback_speed = st.segmented_control(
     "Playback speed",
@@ -322,9 +339,11 @@ st.plotly_chart(
 st.caption(
     "The blue tab and orange slot align through complementarity, then close through "
     "trust and integration. Red look-alike pieces compete for the specialist's "
-    "place; market agents reveal more of the wider picture as adoption grows. Blue "
-    "arrows carry capability, orange arrows return resources, green arrows deliver "
-    "value, gold arrows return demand, and red arrows show copying."
+    "place; market agents reveal more of the wider picture as adoption grows. The "
+    "blue, orange, red and purple influence fields show how much of the environment "
+    "each piece can shape. Up and down arrows show environmental tailwinds or "
+    "headwinds. Blue arrows carry capability, orange arrows return resources, green "
+    "arrows deliver value, gold arrows return demand, and red arrows show copying."
 )
 
 st.divider()
@@ -335,10 +354,11 @@ current = df.iloc[selected_month]
 c1, c2, c3, c4 = st.columns(4)
 c1.metric("Current phase", f"{int(current['Phase'])} of 6", current["Status"])
 c2.metric("Realised synergy", f"{current['Realised synergy']:.0f}/100")
-c3.metric("Local shaping power", f"{current['Shaping power']:.0f}/100")
-c4.metric(
-    "Commoditisation risk", f"{current['Commoditisation risk']:.0f}/100"
+c3.metric(
+    "Joint environmental control",
+    f"{current['Joint environmental control']:.0f}/100",
 )
+c4.metric("Commoditisation risk", f"{current['Commoditisation risk']:.0f}/100")
 
 st.info(f"**{current['Phase name']}** — {insight_for(current)}")
 st.plotly_chart(make_phase_chart(df), use_container_width=True)
@@ -356,6 +376,10 @@ with left:
                 "Co-evolution",
                 "Synchronisation",
                 "Renewal",
+                "Specialist influence",
+                "Partner influence",
+                "Imitator influence",
+                "Joint environmental control",
             ],
             "Observable score": [
                 focus * 100,
@@ -364,6 +388,10 @@ with left:
                 current["Trust"],
                 current["Integration"],
                 current["Rarity"],
+                current["Specialist influence"],
+                current["Partner influence"],
+                current["Imitator influence"],
+                current["Joint environmental control"],
             ],
         }
     )
@@ -380,7 +408,9 @@ with right:
         "- Raise **expertise concentration** while keeping overall size unchanged to see local strength.\n"
         "- Lower **partner complementarity** to see why expertise alone is insufficient.\n"
         "- Raise **coordination friction** to separate potential synergy from realised synergy.\n"
-        "- Raise **renewal** to see how the Jigsaw maintains differentiation after success."
+        "- Raise **renewal** to see how the Jigsaw maintains differentiation after success.\n"
+        "- Lower **market demand** or raise **imitation pressure** to contract the specialist's influence field.\n"
+        "- Raise **trust** and **integration** to expand the joint purple influence field."
     )
 
 with st.expander("Model logic and limitations"):
@@ -390,5 +420,7 @@ with st.expander("Model logic and limitations"):
         "complementarity and openness create recognition; reliable delivery builds "
         "trust; trust plus integration turns potential synergy into realised value; "
         "and imitation erodes differentiation unless innovation renews it. All scores "
-        "are dimensionless 0–100 indices."
+        "are dimensionless 0–100 indices. Influence fields combine internal strength "
+        "with environmental demand, fit, trust, friction, adoption and imitation; they "
+        "represent relative shaping capacity rather than physical market share."
     )

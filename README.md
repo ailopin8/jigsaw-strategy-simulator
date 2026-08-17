@@ -50,6 +50,13 @@ Streamlit will print the local URL in the terminal, typically
   demand feedback. Red arrows show capability knowledge being copied.
 - The translucent red barrier represents effective coordination friction. It
   shrinks as trust and integration reduce friction's effect.
+- Blue, orange, red, and purple influence fields expand or contract to show how
+  much of the surrounding environment the specialist, partner, imitators, and
+  combined jigsaw can shape. The pieces themselves also grow or shrink.
+- Arrows inside the specialist and partner pieces show whether the environment
+  is currently providing a tailwind, a headwind, or a roughly neutral effect.
+- Market demand, adoption, fit, trust, and rarity strengthen influence. Friction,
+  weak demand, imitation, and commoditisation reduce or redirect it.
 - Background zones distinguish the scarce piece, the fit-and-interlock process,
   and the completed market picture.
 
@@ -58,6 +65,9 @@ timeline, or change playback speed above it.
 
 Choose **Integrated jigsaw** to watch a high-fit relationship progress to a
 complete phase-6 interlock and reveal the wider market picture.
+
+Choose **Easy to copy** to see the opposite movement: imitation expands the red
+field while specialist and joint environmental influence contract.
 
 ## Control groups
 
