@@ -92,6 +92,70 @@ def simulate(p: Params) -> pd.DataFrame:
         value_captured = clamp(
             value_created * (0.30 + 0.50 * shaping_power + 0.20 * rarity)
         )
+        effective_friction = clamp(
+            p.coordination_friction * (1.0 - 0.72 * integration) * (1.0 - 0.22 * trust)
+        )
+        imitation_intensity = clamp(
+            p.imitation_pressure
+            * 12.5
+            * (0.35 + 0.65 * recognition)
+            * (1.0 - 0.50 * expertise)
+            + 0.32 * (1.0 - rarity)
+            + 0.20 * commoditisation
+        )
+        market_pull = clamp(p.market_demand * (0.35 + 0.65 * adoption))
+
+        specialist_environment_balance = (
+            0.45 * market_pull
+            + 0.20 * trust
+            + 0.20 * fit_quality
+            + 0.15 * rarity
+            - 0.55 * imitation_intensity
+            - 0.45 * effective_friction
+        )
+        partner_environment_balance = (
+            0.45 * market_pull
+            + 0.20 * integration
+            + 0.15 * trust
+            + 0.20 * fit_quality
+            - 0.55 * effective_friction
+            - 0.20 * commoditisation
+        )
+        specialist_environment_support = clamp(
+            0.50 + 0.50 * specialist_environment_balance
+        )
+        partner_environment_support = clamp(0.50 + 0.50 * partner_environment_balance)
+        specialist_influence = clamp(
+            0.20 * expertise
+            + 0.20 * rarity
+            + 0.20 * local_strength
+            + 0.20 * shaping_power
+            + 0.10 * value_captured
+            + 0.10 * market_pull
+            + 0.18 * specialist_environment_balance
+        )
+        partner_influence = clamp(
+            0.24 * p.partner_reach
+            + 0.16 * recognition
+            + 0.15 * trust
+            + 0.16 * integration
+            + 0.15 * realised_synergy
+            + 0.08 * adoption
+            + 0.06 * market_pull
+            + 0.18 * partner_environment_balance
+        )
+        imitator_influence = clamp(
+            0.55 * imitation_intensity + 0.25 * commoditisation + 0.20 * (1.0 - rarity)
+        )
+        joint_environment_control = clamp(
+            0.28 * specialist_influence
+            + 0.28 * partner_influence
+            + 0.16 * realised_synergy
+            + 0.12 * adoption
+            + 0.10 * integration
+            + 0.06 * fit_quality
+            - 0.18 * effective_friction
+        )
 
         if integration >= 0.67 and trust >= 0.58 and recognition >= 0.70:
             phase = 6
@@ -135,7 +199,16 @@ def simulate(p: Params) -> pd.DataFrame:
                 "Shaping power": shaping_power * 100,
                 "Value created": value_created * 100,
                 "Value captured": value_captured * 100,
+                "Market adoption": adoption * 100,
                 "Commoditisation risk": commoditisation * 100,
+                "Market pull": market_pull * 100,
+                "Specialist environmental support": specialist_environment_support
+                * 100,
+                "Partner environmental support": partner_environment_support * 100,
+                "Specialist influence": specialist_influence * 100,
+                "Partner influence": partner_influence * 100,
+                "Imitator influence": imitator_influence * 100,
+                "Joint environmental control": joint_environment_control * 100,
             }
         )
 
@@ -143,15 +216,15 @@ def simulate(p: Params) -> pd.DataFrame:
             break
 
         expertise_gain = p.learning_rate * p.focus * (1.0 - expertise)
-        expertise_loss = 0.009 * (1.0 - p.focus) + 0.006 * p.coordination_friction * integration
+        expertise_loss = (
+            0.009 * (1.0 - p.focus) + 0.006 * p.coordination_friction * integration
+        )
         expertise = clamp(expertise + expertise_gain - expertise_loss)
 
         rarity = clamp(
             rarity
             + p.innovation_rate * expertise * (1.0 - rarity)
-            - p.imitation_pressure
-            * recognition
-            * (0.45 + 0.55 * (1.0 - expertise))
+            - p.imitation_pressure * recognition * (0.45 + 0.55 * (1.0 - expertise))
         )
 
         recognition_target = clamp(
@@ -167,8 +240,7 @@ def simulate(p: Params) -> pd.DataFrame:
             recognition * p.delivery_reliability * (0.35 + 0.65 * fit_quality)
         )
         trust_target = clamp(
-            delivery_signal
-            - 0.32 * p.coordination_friction * (1.0 - integration)
+            delivery_signal - 0.32 * p.coordination_friction * (1.0 - integration)
         )
         trust = clamp(trust + 0.075 * (trust_target - trust))
 
@@ -179,9 +251,7 @@ def simulate(p: Params) -> pd.DataFrame:
             * (1.0 - 0.55 * p.coordination_friction)
             * 2.5
         )
-        integration = clamp(
-            integration + 0.065 * (integration_target - integration)
-        )
+        integration = clamp(integration + 0.065 * (integration_target - integration))
 
         adoption_target = clamp(
             realised_synergy * p.market_demand * p.partner_reach * 1.55
@@ -228,4 +298,3 @@ def insight_for(row: pd.Series) -> str:
         6: "Delivery interfaces are synchronised; the specialist capability now functions as part of a larger system.",
     }
     return messages[phase]
-

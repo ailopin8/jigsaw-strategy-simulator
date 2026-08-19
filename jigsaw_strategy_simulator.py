@@ -6,6 +6,7 @@ import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
 
+from jigsaw_agent_visualization import make_agent_simulation_chart
 from jigsaw_strategy_model import PHASES, Params, insight_for, phase_bands, simulate
 
 
@@ -16,6 +17,7 @@ def make_trajectory_chart(df: pd.DataFrame) -> go.Figure:
         ("Partner recognition", "#F58518"),
         ("Realised synergy", "#54A24B"),
         ("Shaping power", "#B279A2"),
+        ("Joint environmental control", "#7A5195"),
         ("Commoditisation risk", "#E45756"),
     ]
     for name, colour in series:
@@ -26,7 +28,14 @@ def make_trajectory_chart(df: pd.DataFrame) -> go.Figure:
                 mode="lines",
                 name=name,
                 line={
-                    "width": 3 if name in {"Realised synergy", "Shaping power"} else 2,
+                    "width": 3
+                    if name
+                    in {
+                        "Realised synergy",
+                        "Shaping power",
+                        "Joint environmental control",
+                    }
+                    else 2,
                     "color": colour,
                 },
                 hovertemplate=f"Month %{{x}}<br>{name}: %{{y:.1f}}<extra></extra>",
@@ -85,9 +94,20 @@ st.caption(
 
 with st.sidebar:
     st.header("Scenario controls")
+    st.caption(
+        "Controls are grouped by their primary effect. Changes then propagate "
+        "through the other pieces as the jigsaw evolves."
+    )
+    st.markdown("#### Scenario setup")
     preset = st.selectbox(
         "Starting scenario",
-        ["Promising specialist", "Hidden gem", "Easy to copy", "Poor fit"],
+        [
+            "Promising specialist",
+            "Integrated jigsaw",
+            "Hidden gem",
+            "Easy to copy",
+            "Poor fit",
+        ],
     )
     presets = {
         "Promising specialist": {
@@ -97,6 +117,21 @@ with st.sidebar:
             "complementarity": 80,
             "openness": 65,
             "friction": 25,
+        },
+        "Integrated jigsaw": {
+            "focus": 85,
+            "expertise": 55,
+            "rarity": 85,
+            "complementarity": 98,
+            "openness": 95,
+            "friction": 5,
+            "trust": 35,
+            "reliability": 98,
+            "integration": 95,
+            "reach": 90,
+            "demand": 90,
+            "innovation": 7,
+            "imitation": 1,
         },
         "Hidden gem": {
             "focus": 90,
@@ -109,10 +144,16 @@ with st.sidebar:
         "Easy to copy": {
             "focus": 72,
             "expertise": 38,
-            "rarity": 48,
+            "rarity": 65,
             "complementarity": 78,
             "openness": 70,
             "friction": 20,
+            "trust": 30,
+            "reliability": 85,
+            "integration": 60,
+            "demand": 70,
+            "innovation": 0,
+            "imitation": 8,
         },
         "Poor fit": {
             "focus": 70,
@@ -125,107 +166,138 @@ with st.sidebar:
     }
     selected_preset = presets[preset]
     months = st.slider("Simulation length (months)", 24, 120, 72, 12)
-    focus = slider(
-        "Capability concentration",
-        10,
-        100,
-        selected_preset["focus"],
-        "How much effort is focused on one specialism.",
-    )
-    initial_expertise = slider(
-        "Initial expertise depth",
-        5,
-        95,
-        selected_preset["expertise"],
-        "Starting mastery of the narrow capability.",
-    )
-    learning_rate = (
-        slider(
-            "Learning rate",
-            1,
-            10,
-            5,
-            "Speed at which focused practice deepens expertise.",
+    st.divider()
+
+    with st.expander("🔷 Specialist piece (blue)", expanded=True):
+        st.caption(
+            "Primary target: the specialist's expertise, rarity halo, renewal "
+            "activity, and local strength."
         )
-        * 0.9
-    )
-    innovation_rate = slider(
-        "Renewal / innovation",
-        0,
-        8,
-        3,
-        "How quickly the specialist renews the capability to preserve rarity.",
-    )
-    initial_rarity = slider(
-        "Initial scarcity",
-        5,
-        100,
-        selected_preset["rarity"],
-        "How difficult the specialist capability is to find or copy.",
-    )
-    imitation_pressure = slider(
-        "Imitation pressure",
-        0,
-        8,
-        2,
-        "How quickly alternatives copy or substitute the specialism.",
-    )
-    complementarity = slider(
-        "Partner complementarity",
-        0,
-        100,
-        selected_preset["complementarity"],
-        "How strongly the specialist capability complements the partner.",
-    )
-    partner_reach = slider(
-        "Partner reach / platform",
-        10,
-        100,
-        82,
-        "Scale of customers, assets, distribution or legitimacy supplied by the partner.",
-    )
-    partner_openness = slider(
-        "Partner openness",
-        0,
-        100,
-        selected_preset["openness"],
-        "Willingness to recognise and use outside expertise.",
-    )
-    initial_trust = slider(
-        "Initial trust",
-        0,
-        80,
-        18,
-        "Trust present before collaboration begins.",
-    )
-    reliability = slider(
-        "Delivery reliability",
-        20,
-        100,
-        78,
-        "Consistency with which the specialist delivers useful work.",
-    )
-    integration_effort = slider(
-        "Integration effort",
-        0,
-        100,
-        48,
-        "Effort devoted to aligning interfaces and processes.",
-    )
-    friction = slider(
-        "Coordination friction",
-        0,
-        100,
-        selected_preset["friction"],
-        "Cultural, technical and governance difficulty in working together.",
-    )
-    demand = slider(
-        "Market demand",
-        10,
-        100,
-        72,
-        "Demand for the combined value proposition.",
-    )
+        focus = slider(
+            "Capability concentration",
+            10,
+            100,
+            selected_preset["focus"],
+            "How much effort is focused on one specialism.",
+        )
+        initial_expertise = slider(
+            "Initial expertise depth",
+            5,
+            95,
+            selected_preset["expertise"],
+            "Starting mastery of the narrow capability.",
+        )
+        learning_rate = (
+            slider(
+                "Learning rate",
+                1,
+                10,
+                5,
+                "Speed at which focused practice deepens expertise.",
+            )
+            * 0.9
+        )
+        innovation_rate = slider(
+            "Renewal / innovation",
+            0,
+            8,
+            selected_preset.get("innovation", 3),
+            "How quickly the specialist renews the capability to preserve rarity.",
+        )
+        initial_rarity = slider(
+            "Initial scarcity",
+            5,
+            100,
+            selected_preset["rarity"],
+            "How difficult the specialist capability is to find or copy.",
+        )
+
+    with st.expander("🟧 Partner platform (orange)", expanded=True):
+        st.caption(
+            "Primary target: the partner's platform scale and willingness to "
+            "recognise external capability."
+        )
+        partner_reach = slider(
+            "Partner reach / platform",
+            10,
+            100,
+            selected_preset.get("reach", 82),
+            "Scale of customers, assets, distribution or legitimacy supplied by the partner.",
+        )
+        partner_openness = slider(
+            "Partner openness",
+            0,
+            100,
+            selected_preset["openness"],
+            "Willingness to recognise and use outside expertise.",
+        )
+
+    with st.expander("🧩 Fit & interlock (blue ↔ orange)", expanded=True):
+        st.caption(
+            "Primary target: alignment and exchange between both pieces, "
+            "including the fit gap, flow strength, and friction barrier."
+        )
+        complementarity = slider(
+            "Partner complementarity",
+            0,
+            100,
+            selected_preset["complementarity"],
+            "How strongly the specialist capability complements the partner.",
+        )
+        initial_trust = slider(
+            "Initial trust",
+            0,
+            80,
+            selected_preset.get("trust", 18),
+            "Trust present before collaboration begins.",
+        )
+        reliability = slider(
+            "Delivery reliability",
+            20,
+            100,
+            selected_preset.get("reliability", 78),
+            "Consistency with which the specialist delivers useful work.",
+        )
+        integration_effort = slider(
+            "Integration effort",
+            0,
+            100,
+            selected_preset.get("integration", 48),
+            "Effort devoted to aligning interfaces and processes.",
+        )
+        friction = slider(
+            "Coordination friction",
+            0,
+            100,
+            selected_preset["friction"],
+            "Cultural, technical and governance difficulty in working together.",
+        )
+
+    with st.expander("🔴 Look-alike imitators", expanded=False):
+        st.caption(
+            "Primary target: the red pieces' copying speed, approach, growth, "
+            "and pressure on specialist scarcity."
+        )
+        imitation_pressure = slider(
+            "Imitation pressure",
+            0,
+            8,
+            selected_preset.get("imitation", 2),
+            "How quickly alternatives copy or substitute the specialism.",
+        )
+
+    with st.expander("🟢 Market picture", expanded=False):
+        st.caption(
+            "Primary target: the green agents' demand field, adoption, and "
+            "response to the combined offer."
+        )
+        demand = slider(
+            "Market demand",
+            10,
+            100,
+            selected_preset.get("demand", 72),
+            "Demand for the combined value proposition.",
+        )
 
 params = Params(
     months=months,
@@ -246,16 +318,47 @@ params = Params(
 )
 df = simulate(params)
 
+st.subheader("Animated Jigsaw ecosystem")
+st.caption(
+    "Press Play to watch the scarce specialist piece approach and interlock with "
+    "the partner platform. Fit, copying and completion all come from the model. "
+    "The pieces and their influence rings expand or contract as the environment "
+    "supports or resists them. Drag the chart timeline to inspect any month."
+)
+playback_speed = st.segmented_control(
+    "Playback speed",
+    options=["Slow", "Normal", "Fast"],
+    default="Normal",
+)
+frame_duration = {"Slow": 320, "Normal": 180, "Fast": 90}[playback_speed or "Normal"]
+st.plotly_chart(
+    make_agent_simulation_chart(df, params, frame_duration=frame_duration),
+    use_container_width=True,
+    config={"displayModeBar": False},
+)
+st.caption(
+    "The blue tab and orange slot align through complementarity, then close through "
+    "trust and integration. Red look-alike pieces compete for the specialist's "
+    "place; market agents reveal more of the wider picture as adoption grows. The "
+    "blue, orange, red and purple influence fields show how much of the environment "
+    "each piece can shape. Up and down arrows show environmental tailwinds or "
+    "headwinds. Blue arrows carry capability, orange arrows return resources, green "
+    "arrows deliver value, gold arrows return demand, and red arrows show copying."
+)
+
+st.divider()
+st.subheader("Inspect the strategy")
 selected_month = st.slider("Inspect month", 0, months, months)
 current = df.iloc[selected_month]
 
 c1, c2, c3, c4 = st.columns(4)
 c1.metric("Current phase", f"{int(current['Phase'])} of 6", current["Status"])
 c2.metric("Realised synergy", f"{current['Realised synergy']:.0f}/100")
-c3.metric("Local shaping power", f"{current['Shaping power']:.0f}/100")
-c4.metric(
-    "Commoditisation risk", f"{current['Commoditisation risk']:.0f}/100"
+c3.metric(
+    "Joint environmental control",
+    f"{current['Joint environmental control']:.0f}/100",
 )
+c4.metric("Commoditisation risk", f"{current['Commoditisation risk']:.0f}/100")
 
 st.info(f"**{current['Phase name']}** — {insight_for(current)}")
 st.plotly_chart(make_phase_chart(df), use_container_width=True)
@@ -273,6 +376,10 @@ with left:
                 "Co-evolution",
                 "Synchronisation",
                 "Renewal",
+                "Specialist influence",
+                "Partner influence",
+                "Imitator influence",
+                "Joint environmental control",
             ],
             "Observable score": [
                 focus * 100,
@@ -281,6 +388,10 @@ with left:
                 current["Trust"],
                 current["Integration"],
                 current["Rarity"],
+                current["Specialist influence"],
+                current["Partner influence"],
+                current["Imitator influence"],
+                current["Joint environmental control"],
             ],
         }
     )
@@ -297,7 +408,9 @@ with right:
         "- Raise **expertise concentration** while keeping overall size unchanged to see local strength.\n"
         "- Lower **partner complementarity** to see why expertise alone is insufficient.\n"
         "- Raise **coordination friction** to separate potential synergy from realised synergy.\n"
-        "- Raise **renewal** to see how the Jigsaw maintains differentiation after success."
+        "- Raise **renewal** to see how the Jigsaw maintains differentiation after success.\n"
+        "- Lower **market demand** or raise **imitation pressure** to contract the specialist's influence field.\n"
+        "- Raise **trust** and **integration** to expand the joint purple influence field."
     )
 
 with st.expander("Model logic and limitations"):
@@ -307,6 +420,7 @@ with st.expander("Model logic and limitations"):
         "complementarity and openness create recognition; reliable delivery builds "
         "trust; trust plus integration turns potential synergy into realised value; "
         "and imitation erodes differentiation unless innovation renews it. All scores "
-        "are dimensionless 0–100 indices."
+        "are dimensionless 0–100 indices. Influence fields combine internal strength "
+        "with environmental demand, fit, trust, friction, adoption and imitation; they "
+        "represent relative shaping capacity rather than physical market share."
     )
-
